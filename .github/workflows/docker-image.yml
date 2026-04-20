@@ -1,0 +1,33 @@
+name: Build and Deploy to Azure
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Login to Azure
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+    - name: Login to ACR
+      run: az acr login --name cs2apiregistry
+
+    - name: Build and push Docker image
+      run: |
+        docker build -t cs2apiregistry.azurecr.io/api-container:latest .
+        docker push cs2apiregistry.azurecr.io/api-container:latest
+
+    - name: Deploy to Container App
+      run: |
+        az containerapp update \
+          --name api-container \
+          --resource-group NetworkWatcherRG \
+          --image cs2apiregistry.azurecr.io/api-container:latest
